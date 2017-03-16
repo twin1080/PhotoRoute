@@ -7,6 +7,7 @@ using System.Net;
 using System.Web;
 using System.Web.Mvc;
 using PhotoRoute.Models;
+using System.Windows.Media.Imaging;
 
 namespace PhotoRoute.Controllers
 {
@@ -73,21 +74,52 @@ namespace PhotoRoute.Controllers
             return View(journey);
         }
 
-        // POST: Journeys/Edit/5
+       // POST: Journeys/Edit/5
         // To protect from overposting attacks, please enable the specific properties you want to bind to, for 
         // more details see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Edit([Bind(Include = "Id,Name,StartDate")] Journey journey)
+        public ActionResult Edit([Bind(Include = "Id,Name,StartDate")] Journey journey, IEnumerable<HttpPostedFileBase> files)
         {
             if (ModelState.IsValid)
             {
+                int i = db.Point.ToList().OrderBy(x => x.Id).Select(x => x.Id).Last() + 1;
+                foreach (var file in files)
+                {
+                    var fileName = System.IO.Path.Combine("C:\\", file.FileName);
+                    file.SaveAs(fileName);
+                    System.IO.FileStream Foto = System.IO.File.Open(fileName, System.IO.FileMode.Open, System.IO.FileAccess.Read);
+                    try
+                    {
+                        var decoder = JpegBitmapDecoder.Create(Foto, BitmapCreateOptions.IgnoreColorProfile, BitmapCacheOption.Default);
+                        BitmapMetadata exif = (BitmapMetadata)decoder.Frames[0].Metadata.Clone();
+                        var latitude = (ulong[])exif.GetQuery("/app1/ifd/gps/{ushort=2}");
+                        var longitude = (ulong[])exif.GetQuery("/app1/ifd/gps/{ushort=4}");
+                        var photoTime = Convert.ToDateTime(exif.DateTaken);
+                        var point = Newtonsoft.Json.JsonConvert.SerializeObject(new object[] { latitude, longitude });
+                        db.Point.Add(new Point() { Id = i++, JourneyId = journey.Id, Location = point, Time = photoTime });
+                    }
+                    finally {
+                        Foto.Close();
+                    }
+                }
+
                 db.Entry(journey).State = EntityState.Modified;
                 db.SaveChanges();
                 return RedirectToAction("Index");
             }
+
+            
+
             return View(journey);
         }
+
+        //[HttpPost]
+        //public ActionResult Edit(object files)
+        //{
+        //    return RedirectToAction("Edit");
+        // }
+
 
         // GET: Journeys/Delete/5
         public ActionResult Delete(int? id)
