@@ -24,16 +24,22 @@ namespace PhotoRoute.Controllers
         // GET: Journeys/Details/5
         public ActionResult Details(int? id)
         {
-            if (id == null)
-            {
-                return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
-            }
-            Journey journey = db.Journey.Find(id);
+            var journey = FindJourneybyId(id);
             if (journey == null)
             {
                 return HttpNotFound();
             }
             return View(journey);
+        }
+
+        private Journey FindJourneybyId(int? id)
+        {
+            if (id == null)
+            {
+                throw new ArgumentNullException(nameof(id));
+            }
+            Journey journey = db.Journey.Find(id);
+            return journey;
         }
 
         // GET: Journeys/Create
@@ -146,6 +152,23 @@ namespace PhotoRoute.Controllers
             db.SaveChanges();
             return RedirectToAction("Index");
         }
+
+
+        public JsonResult GetData(int? id)
+        {
+            var result = new List<dynamic>();
+            // создадим список данных
+            var journey = FindJourneybyId(id);
+            /*
+            foreach (var point in journey.Point)
+            {
+                result.Add(new dynamic(){latitude = point.Location});
+            }
+            */
+
+            return Json(journey.Point, JsonRequestBehavior.AllowGet);
+        }
+
 
         protected override void Dispose(bool disposing)
         {
