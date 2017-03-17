@@ -22,7 +22,7 @@
 @section scripts {
     <script type="text/javascript">
 
-    $(document).ready(function () {
+    $(document).ready(function() {
         GetMap();
     });
 
@@ -31,12 +31,12 @@
 
         google.maps.visualRefresh = true;
         // установка основных координат
-        var Moscow = new google.maps.LatLng(55.752622, 37.617567);
+        var Perm = new google.maps.LatLng(57.996667, 56.271944);
 
         // Установка общих параметров отображения карты, как масштаб, центральная точка и тип карты
         var mapOptions = {
             zoom: 15,
-            center: Moscow,
+            center: Perm,
             mapTypeId: google.maps.MapTypeId.G_NORMAL_MAP
         };
 
@@ -44,7 +44,7 @@
         var map = new google.maps.Map(document.getElementById("canvas"), mapOptions);
 
         // Настраиваем красный маркер, который будет использоваться для центральной точки
-        var myLatlng = new google.maps.LatLng(55.752622, 37.617567);
+        var myLatlng = Perm;
 
         var marker = new google.maps.Marker({
             position: myLatlng,
@@ -56,23 +56,28 @@
         marker.setIcon('http://maps.google.com/mapfiles/ms/icons/red-dot.png');
 
         // Получаем данные
-       // $.getJSON('@Url.Action("GetData","Journeys", new { id = Model.Id })', function (data) {
-            // Проходим по всем данным и устанавливаем для них маркеры
-        $.each(@Model.Id,
+
+        $.getJSON('@Url.Action("GetData", "Journeys", new {id = Model.Id})',
+            function (data) {
+           
+
+        // Проходим по всем данным и устанавливаем для них маркеры
+        $.each(data,
             function(i, item) {
                 var marker = new google.maps.Marker({
                     //'position': new google.maps.LatLng(item.GeoLong, item.GeoLat),55.752622, 37.617567
-                    'position': new google.maps.LatLng(55.752622, 37.617567),
+                    'position': new google.maps.LatLng(item.latitude, item.longitude),
                     'map': map,
                     'title': "test"
                 });
 
                 // Берем для этих маркеров синие иконки с сайта google
-                marker.setIcon('http://maps.google.com/mapfiles/ms/icons/blue-dot.png')
+                marker.setIcon('http://maps.google.com/mapfiles/ms/icons/blue-dot.png');
 
                 // Для каждого объекта добавляем доп. информацию, выводимую в отдельном окне
                 var infowindow = new google.maps.InfoWindow({
-                    content: "<div class='stationInfo'><h2>Станция </h2><div><h4>Линия метро: </h4></div><div><h4>Пассажиропоток:  млн. человек</h4></div></div>"
+                    content:
+                        "<div class='stationInfo'><h2>Станция </h2><div><h4>Линия метро: </h4></div><div><h4>Пассажиропоток:  млн. человек</h4></div></div>"
                 });
 
                 // обработчик нажатия на маркер объекта
@@ -82,8 +87,9 @@
                         infowindow.open(map, marker);
                     });
             });
-        //});
-    }
+            });
+
+        }
     </script>
 }
 

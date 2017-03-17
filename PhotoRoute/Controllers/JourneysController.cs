@@ -80,7 +80,7 @@ namespace PhotoRoute.Controllers
             return View(journey);
         }
 
-       // POST: Journeys/Edit/5
+        // POST: Journeys/Edit/5
         // To protect from overposting attacks, please enable the specific properties you want to bind to, for 
         // more details see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
@@ -89,24 +89,40 @@ namespace PhotoRoute.Controllers
         {
             if (ModelState.IsValid)
             {
-                int i = db.Point.ToList().OrderBy(x => x.Id).Select(x => x.Id).Last() + 1;
+                int i = 1;
+                if (db.Point.Any())
+                {
+                    i = db.Point.ToList().OrderBy(x => x.Id).Select(x => x.Id).Last() + 1;
+                }
                 foreach (var file in files)
                 {
                     var fileName = System.IO.Path.Combine("C:\\", file.FileName);
                     file.SaveAs(fileName);
-                    System.IO.FileStream Foto = System.IO.File.Open(fileName, System.IO.FileMode.Open, System.IO.FileAccess.Read);
+                    System.IO.FileStream foto = System.IO.File.Open(fileName, System.IO.FileMode.Open, System.IO.FileAccess.Read);
                     try
                     {
-                        var decoder = JpegBitmapDecoder.Create(Foto, BitmapCreateOptions.IgnoreColorProfile, BitmapCacheOption.Default);
+                        var decoder = BitmapDecoder.Create(foto, BitmapCreateOptions.IgnoreColorProfile, BitmapCacheOption.Default);
                         BitmapMetadata exif = (BitmapMetadata)decoder.Frames[0].Metadata.Clone();
                         var latitude = (ulong[])exif.GetQuery("/app1/ifd/gps/{ushort=2}");
                         var longitude = (ulong[])exif.GetQuery("/app1/ifd/gps/{ushort=4}");
                         var photoTime = Convert.ToDateTime(exif.DateTaken);
-                        var point = Newtonsoft.Json.JsonConvert.SerializeObject(new object[] { latitude, longitude });
-                        db.Point.Add(new Point() { Id = i++, JourneyId = journey.Id, Location = point, Time = photoTime });
+
+                        var realLatitude = GPSHelper.RationalDegreesToReal(latitude[0], latitude[1], latitude[2]);
+                        var realLongitude = GPSHelper.RationalDegreesToReal(longitude[0], longitude[1], longitude[2]);
+
+                        db.Point.Add(new Point()
+                                        {
+                                            Id = i++,
+                                            JourneyId = journey.Id,
+                                            Time = photoTime,
+                                            latitude = realLatitude,
+                                            longitude = realLongitude,
+                                            file = fileName
+                                        });
                     }
-                    finally {
-                        Foto.Close();
+                    finally
+                    {
+                        foto.Close();
                     }
                 }
 
@@ -115,10 +131,11 @@ namespace PhotoRoute.Controllers
                 return RedirectToAction("Index");
             }
 
-            
+
 
             return View(journey);
         }
+
 
         //[HttpPost]
         //public ActionResult Edit(object files)
@@ -166,7 +183,10 @@ namespace PhotoRoute.Controllers
             }
             */
 
-            return Json(journey.Point, JsonRequestBehavior.AllowGet);
+            return Json(journey.Point.Select(x => new {
+                                                    latitude = x.latitude, 
+                                                    longitude = x.longitude,
+                                                    file = x.file}).ToList(), JsonRequestBehavior.AllowGet);
         }
 
 

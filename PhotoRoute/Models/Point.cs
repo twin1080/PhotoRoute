@@ -15,9 +15,11 @@ namespace PhotoRoute.Models
     public partial class Point
     {
         public int Id { get; set; }
-        public string Location { get; set; }
         public System.DateTime Time { get; set; }
         public int JourneyId { get; set; }
+        public float latitude { get; set; }
+        public float longitude { get; set; }
+        public string file { get; set; }
     
         public virtual Journey Journey { get; set; }
     }
