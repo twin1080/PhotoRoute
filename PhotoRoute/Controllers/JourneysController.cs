@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Entity;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Web;
@@ -96,33 +97,13 @@ namespace PhotoRoute.Controllers
                 }
                 foreach (var file in files)
                 {
-                    var fileName = System.IO.Path.Combine("C:\\", file.FileName);
-                    file.SaveAs(fileName);
-                    System.IO.FileStream foto = System.IO.File.Open(fileName, System.IO.FileMode.Open, System.IO.FileAccess.Read);
-                    try
-                    {
-                        var decoder = BitmapDecoder.Create(foto, BitmapCreateOptions.IgnoreColorProfile, BitmapCacheOption.Default);
-                        BitmapMetadata exif = (BitmapMetadata)decoder.Frames[0].Metadata.Clone();
-                        var latitude = (ulong[])exif.GetQuery("/app1/ifd/gps/{ushort=2}");
-                        var longitude = (ulong[])exif.GetQuery("/app1/ifd/gps/{ushort=4}");
-                        var photoTime = Convert.ToDateTime(exif.DateTaken);
+                    var fileName = FileHelper.SaveFileToHardDrive(file);
+                    var newPoint = FileHelper.NewPointByStoredFile(fileName, ref i);
 
-                        var realLatitude = GPSHelper.RationalDegreesToReal(latitude[0], latitude[1], latitude[2]);
-                        var realLongitude = GPSHelper.RationalDegreesToReal(longitude[0], longitude[1], longitude[2]);
-
-                        db.Point.Add(new Point()
-                                        {
-                                            Id = i++,
-                                            JourneyId = journey.Id,
-                                            Time = photoTime,
-                                            latitude = realLatitude,
-                                            longitude = realLongitude,
-                                            file = fileName
-                                        });
-                    }
-                    finally
+                    if (newPoint != null)
                     {
-                        foto.Close();
+                        newPoint.JourneyId = journey.Id;
+                        db.Point.Add(newPoint);
                     }
                 }
 
@@ -130,19 +111,9 @@ namespace PhotoRoute.Controllers
                 db.SaveChanges();
                 return RedirectToAction("Index");
             }
-
-
-
+            
             return View(journey);
         }
-
-
-        //[HttpPost]
-        //public ActionResult Edit(object files)
-        //{
-        //    return RedirectToAction("Edit");
-        // }
-
 
         // GET: Journeys/Delete/5
         public ActionResult Delete(int? id)
@@ -176,17 +147,13 @@ namespace PhotoRoute.Controllers
             var result = new List<dynamic>();
             // создадим список данных
             var journey = FindJourneybyId(id);
-            /*
-            foreach (var point in journey.Point)
-            {
-                result.Add(new dynamic(){latitude = point.Location});
-            }
-            */
 
-            return Json(journey.Point.Select(x => new {
-                                                    latitude = x.latitude, 
-                                                    longitude = x.longitude,
-                                                    file = x.file}).ToList(), JsonRequestBehavior.AllowGet);
+            return Json(journey.Point.Select(x => new
+            {
+                x.latitude,
+                x.longitude,
+                x.file
+            }).ToList(), JsonRequestBehavior.AllowGet);
         }
 
 
