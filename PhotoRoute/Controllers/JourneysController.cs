@@ -152,7 +152,8 @@ namespace PhotoRoute.Controllers
             {
                 x.latitude,
                 x.longitude,
-                x.file
+                x.file,
+                x.Time
             }).ToList(), JsonRequestBehavior.AllowGet);
         }
 
