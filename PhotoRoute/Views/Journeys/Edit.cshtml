@@ -6,6 +6,23 @@
 
 <h2>Edit</h2>
 
+@section styles {
+<link href="~/Content/bootstrap.min.css" rel="stylesheet" />
+<link href="~/Content/bootstrap.min.css" rel="stylesheet" type="text/css" />
+<link href="~/Content/bootstrap-fileinput/css/fileinput.min.css" rel="stylesheet" />
+}
+
+@section HeaderScripts
+{
+<script src="~/Scripts/jquery-1.10.2.min.js"></script>
+<script src="~/Scripts/jquery.validate.min.js"></script>
+<script src="~/Scripts/jquery.validate.unobtrusive.min.js"></script>
+<script src="~/Scripts/fileinput.min.js"></script>
+<script src="~/Scripts/plugins/canvas-to-blob.min.js"></script>
+<script src="~/Scripts/plugins/sortable.min.js"></script>
+<script src="~/Scripts/plugins/purify.min.js"></script>
+}
+
 
 @using (Html.BeginForm("edit", "journeys", FormMethod.Post, new { enctype = "multipart/form-data" }))
 {
@@ -34,7 +51,15 @@
         </div>
 
         <input id="filesupload" type="file" multiple="multiple" name="files" accept="image"/>
-
+        <script>
+        $(document).on('ready', function() {
+            $("#filesupload").fileinput({
+                showUpload: false,
+                maxFileCount: 10,
+                mainClass: "input-group-lg"
+            });
+        });
+        </script>
 
         <div class="form-group">
             <div class="col-md-offset-2 col-md-10">
@@ -50,9 +75,6 @@
     @Html.ActionLink("Back to List", "Index")
 </div>
 
-<script src="~/Scripts/jquery-1.10.2.min.js"></script>
-<script src="~/Scripts/jquery.validate.min.js"></script>
-<script src="~/Scripts/jquery.validate.unobtrusive.min.js"></script>
-<script>
 
-</script>
+@section scripts {
+    <script src="~/Scripts/fileinput.min.js"></script>}
