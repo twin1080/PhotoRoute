@@ -93,7 +93,7 @@
                             // Для каждого объекта добавляем доп. информацию, выводимую в отдельном окне
                             var infowindow = new google.maps.InfoWindow({
                                 content:
-                                    "<div class='stationInfo'><h2>Станция </h2><div><h4>Линия метро: </h4></div><div><h4>Пассажиропоток:  млн. человек</h4></div></div>"
+                                    "<div class='stationInfo'><img src="+item.file+"></div>"
                             });
 
                             // обработчик нажатия на маркер объекта
@@ -119,10 +119,7 @@
                         var journeyStart = new google.maps.LatLng(journeyPolylineCoordinates[0], journeyPolylineCoordinates[0]);
                         map.panTo(journeyStart);
                     }
-
-
                 });
-
         }
     </script>
 }

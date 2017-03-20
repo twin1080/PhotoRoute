@@ -152,7 +152,7 @@ namespace PhotoRoute.Controllers
             {
                 x.latitude,
                 x.longitude,
-                x.file,
+                file = x.file.ToLower().Replace(Request.ServerVariables["APPL_PHYSICAL_PATH"].ToLower(), Request.Url.GetLeftPart(UriPartial.Authority) + "/"),
                 x.Time
             }).ToList(), JsonRequestBehavior.AllowGet);
         }
