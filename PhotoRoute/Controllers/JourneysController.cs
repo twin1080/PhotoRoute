@@ -14,33 +14,34 @@ namespace PhotoRoute.Controllers
 {
     public class JourneysController : Controller
     {
-        private photorouteEntities db = new photorouteEntities();
+
+        private readonly IJourneysRepository _journeysRepository;
+
+        public JourneysController()
+        {
+            _journeysRepository = new JourneysRepository();
+        }
+
+        public JourneysController(IJourneysRepository journeysRepository)
+        {
+            _journeysRepository = journeysRepository;
+        }
 
         // GET: Journeys
         public ActionResult Index()
         {
-            return View(db.Journey.ToList());
+            return View(_journeysRepository.GetAllJourneys());
         }
 
         // GET: Journeys/Details/5
         public ActionResult Details(int? id)
         {
-            var journey = FindJourneybyId(id);
+            var journey = _journeysRepository.FindJourneybyId(id);
             if (journey == null)
             {
                 return HttpNotFound();
             }
             return View(journey);
-        }
-
-        private Journey FindJourneybyId(int? id)
-        {
-            if (id == null)
-            {
-                throw new ArgumentNullException(nameof(id));
-            }
-            Journey journey = db.Journey.Find(id);
-            return journey;
         }
 
         // GET: Journeys/Create
@@ -58,8 +59,7 @@ namespace PhotoRoute.Controllers
         {
             if (ModelState.IsValid)
             {
-                db.Journey.Add(journey);
-                db.SaveChanges();
+                _journeysRepository.AddNewJourney(journey);
                 return RedirectToAction("Index");
             }
 
@@ -73,7 +73,7 @@ namespace PhotoRoute.Controllers
             {
                 return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
             }
-            Journey journey = db.Journey.Find(id);
+            Journey journey = _journeysRepository.FindJourneybyId(id);
             if (journey == null)
             {
                 return HttpNotFound();
@@ -90,28 +90,36 @@ namespace PhotoRoute.Controllers
         {
             if (ModelState.IsValid)
             {
-                int i = 1;
-                if (db.Point.Any())
-                {
-                    i = db.Point.ToList().OrderBy(x => x.Id).Select(x => x.Id).Last() + 1;
-                }
+                var i = _journeysRepository.GetFreePointId();
+
+                var newPoints = new List<Point>();
+
                 foreach (var file in files)
                 {
                     var fileName = FileHelper.SaveFileToHardDrive(file);
-                    var newPoint = FileHelper.NewPointByStoredFile(fileName, ref i);
 
-                    if (newPoint != null)
+                    DateTime? photoTime = FileHelper.FetchDateFromFile(fileName);
+
+                    float realLongitude = FileHelper.FetchLongitudeFromFile(fileName);
+
+                    float realLatitude = FileHelper.FetchLatitudeFromFile(fileName);
+
+                    newPoints.Add(new Point()
                     {
-                        newPoint.JourneyId = journey.Id;
-                        db.Point.Add(newPoint);
+                        file = fileName,
+                        Id = i++,
+                        Time = photoTime.Value,
+                        latitude = realLatitude,
+                        longitude = realLongitude
                     }
+                        );
                 }
 
-                db.Entry(journey).State = EntityState.Modified;
-                db.SaveChanges();
+                _journeysRepository.AddNewPoints(journey, newPoints);
+
                 return RedirectToAction("Index");
             }
-            
+
             return View(journey);
         }
 
@@ -122,7 +130,8 @@ namespace PhotoRoute.Controllers
             {
                 return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
             }
-            Journey journey = db.Journey.Find(id);
+
+            Journey journey = _journeysRepository.FindJourneybyId(id);
             if (journey == null)
             {
                 return HttpNotFound();
@@ -135,9 +144,7 @@ namespace PhotoRoute.Controllers
         [ValidateAntiForgeryToken]
         public ActionResult DeleteConfirmed(int id)
         {
-            Journey journey = db.Journey.Find(id);
-            db.Journey.Remove(journey);
-            db.SaveChanges();
+            _journeysRepository.DeleteJourney(id);
             return RedirectToAction("Index");
         }
 
@@ -146,13 +153,28 @@ namespace PhotoRoute.Controllers
         {
             var result = new List<dynamic>();
             // создадим список данных
-            var journey = FindJourneybyId(id);
+            var journey = _journeysRepository.FindJourneybyId(id);
+
+            var phisicalPlace = "";
+            if (Request != null && !string.IsNullOrEmpty(Request.ServerVariables["APPL_PHYSICAL_PATH"]))
+            {
+                phisicalPlace = Request.ServerVariables["APPL_PHYSICAL_PATH"].ToLower();
+            }
+
+            var domainName = "";
+            if (Request != null && Request.Url != null)
+            {
+                domainName = Request.Url.GetLeftPart(UriPartial.Authority) + "/";
+            }
+
 
             return Json(journey.Point.Select(x => new
             {
                 x.latitude,
                 x.longitude,
-                file = x.file.ToLower().Replace(Request.ServerVariables["APPL_PHYSICAL_PATH"].ToLower(), Request.Url.GetLeftPart(UriPartial.Authority) + "/"),
+                file = (!string.IsNullOrEmpty(phisicalPlace) && !string.IsNullOrEmpty(domainName)) 
+                            ? x.file.ToLower().Replace(phisicalPlace, domainName) 
+                            : x.file,
                 x.Time
             }).ToList(), JsonRequestBehavior.AllowGet);
         }
@@ -160,10 +182,6 @@ namespace PhotoRoute.Controllers
 
         protected override void Dispose(bool disposing)
         {
-            if (disposing)
-            {
-                db.Dispose();
-            }
             base.Dispose(disposing);
         }
     }
